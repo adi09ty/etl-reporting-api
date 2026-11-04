@@ -25,7 +25,8 @@ public class RejectedRow {
     @Column(name = "source_file", nullable = false, length = 255)
     private String sourceFile;
 
-    @Column(name = "row_number", nullable = false)
+    /** Not named "row_number": that is a reserved word (a window function) in MySQL 8. */
+    @Column(name = "source_row", nullable = false)
     private long rowNumber;
 
     @Column(name = "raw_data", length = 1000)
