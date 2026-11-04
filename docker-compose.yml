@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set it in .env}
+      MYSQL_DATABASE: etl
+      MYSQL_USER: ${DB_USER:?set it in .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set it in .env}
+    ports:
+      - "127.0.0.1:3310:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # An S3-compatible store for local use. It accepts any credentials, so the values below are placeholders.
+  s3:
+    image: adobe/s3mock:5.2.3
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: etl-data
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  # One-off job: copies the sample CSV files into the bucket's "incoming/" folder, then exits.
+  s3-init:
+    image: amazon/aws-cli:2.39.3
+    depends_on:
+      - s3
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    volumes:
+      - ./sample-data:/sample:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "for i in $$(seq 1 30); do aws --endpoint-url http://s3:9090 s3 cp /sample/incoming s3://etl-data/incoming --recursive && exit 0; sleep 2; done; exit 1"
+    restart: "no"
+
+  api:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      DB_URL: jdbc:mysql://mysql:3306/etl
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      S3_ENDPOINT: http://s3:9090
+      S3_BUCKET: etl-data
+      S3_ACCESS_KEY: local
+      S3_SECRET_KEY: local
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysqldata:
