@@ -51,6 +51,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <dependency>
+            <!-- Provides the auto-configured RestClient.Builder (and the spring.http.client.* timeouts) -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

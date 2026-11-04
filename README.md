@@ -153,9 +153,10 @@ Health check: `GET /actuator/health`.
 ```bash
 ./mvnw test
 ```
-74 tests:
+79 tests:
 - **Unit:** every validation rule, retry and back-off behaviour, run-status logic, the overlap guard (a second run is refused while one is running), the local file store (including path-traversal protection), the S3 store with a mocked client (paging, copy-then-delete), the REST client and the webhook with a mocked HTTP server, and alert-channel isolation
 - **Integration (Spring Boot, H2, temporary folder as the bucket):** full imports with rejected rows, upsert instead of duplicates, a broken file next to a good one (partial run + alert), a file delivered twice, quoted CSV fields and Windows line endings, rate refresh with retries, failure, invalid data and wrong base currency, the report endpoints with currency conversion and missing rates, and the run-history endpoints
+- **Wiring (nothing mocked):** the application starts with its real beans in local mode (REST client, webhook channel, scheduler) and in S3 mode, so a missing dependency or bean fails the build instead of the Docker start
 
 The real S3 client and the real exchange-rate API are not part of the automated tests (they are mocked there); they are exercised by running the Docker Compose stack.
 
